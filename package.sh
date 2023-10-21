@@ -66,6 +66,7 @@ esac
 
 	prepare() {
 		cd "${srcdir?}"
+		case ${0##*/} in package.sh) ;; *)
 		case ${makepkg_version+makepkg} in
 			makepkg)
 				[ -e ./"$_thatOneFile" ]
@@ -78,6 +79,14 @@ esac
 			# todo: detect build systems Ubuntu/Debian AUR, Alpine, search for more
 			*) printf %s\\n >&2 "unsupported build system"; return 3;;
 		esac
+		esac
+
+		_thatOneFile_mode=$(
+			curl https://api.github.com/repos/denisde4ev/$_reponame/git/trees/master | \
+			jq -r ".tree[] | select(.path == \"$_thatOneFile\") | .mode"
+		)
+		! [ 100000 -lt "$_thatOneFile_mode" ] || _thatOneFile_mode=$((_thatOneFile_mode - 100000))
+		chmod "$_thatOneFile_mode" "$_thatOneFile"
 	}
 
 	#build() {
@@ -121,6 +130,7 @@ case ${0##*/} in package.sh)
 	pkgdir=$PWD/pkg
 	srcdir=$PWD/src
 	_prepare; cd "$startdir"
+	prepare; cd "$startdir"
 	#build; cd "$startdir"
 	#check; cd "$startdir"
 	package; cd "$startdir"
