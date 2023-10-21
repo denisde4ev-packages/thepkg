@@ -1,5 +1,9 @@
 #!/bin/sh
 
+#set -x
+unset _verbose
+
+
 case ${0##*/} in package.sh)
 	set -eu
 	cd "${0%/*}" || exit
@@ -72,8 +76,8 @@ esac
 				[ -e ./"$_thatOneFile" ]
 				[ -L ./"$_thatOneFile" ] && [ -f "$startdir/$_thatOneFile" ] && \
 				case $(readlink -f ./"$_thatOneFile") in "$(readlink -f "$startdir/$_thatOneFile")") ;; *) false; esac && {
-					rm ./"$_thatOneFile"
-					mv -fT "$startdir/"$_thatOneFile"" ./"$_thatOneFile"
+					rm ${_verbose+"-v"} ./"$_thatOneFile"
+					mv ${_verbose+"-v"} -fT "$startdir/"$_thatOneFile"" ./"$_thatOneFile"
 				}
 			;;
 			# todo: detect build systems Ubuntu/Debian AUR, Alpine, search for more
@@ -82,11 +86,11 @@ esac
 		esac
 
 		_thatOneFile_mode=$(
-			curl https://api.github.com/repos/denisde4ev/$_reponame/git/trees/master | \
+			curl ${_verbose-"-s"} https://api.github.com/repos/denisde4ev/$_reponame/git/trees/master | \
 			jq -r ".tree[] | select(.path == \"$_thatOneFile\") | .mode"
 		)
 		! [ 100000 -lt "$_thatOneFile_mode" ] || _thatOneFile_mode=$((_thatOneFile_mode - 100000))
-		chmod "$_thatOneFile_mode" "$_thatOneFile"
+		chmod ${_verbose+"-v"} "$_thatOneFile_mode" "$_thatOneFile"
 	}
 
 	#build() {
@@ -101,8 +105,8 @@ esac
 
 	package() {
 		cd "${srcdir?}"
-		mkdir -p "${pkgdir?}/usr/bin"
-		cp -T ./"$_thatOneFile" "${pkgdir?}"/usr/bin/"$_thatOneFile"
+		mkdir ${_verbose+"-v"} -p "${pkgdir?}/usr/bin"
+		cp ${_verbose+"-v"} -T ./"$_thatOneFile" "${pkgdir?}"/usr/bin/"$_thatOneFile"
 	}
 
 
@@ -113,7 +117,7 @@ esac
 	_prepare() {
 		cd "$srcdir"
 		for i in ${sources}; do
-			 wget "$i"
+			 wget ${_verbose-"-q"} "$i"
 		done
 		unset i
 	}
@@ -134,5 +138,5 @@ case ${0##*/} in package.sh)
 	#build; cd "$startdir"
 	#check; cd "$startdir"
 	package; cd "$startdir"
-	( cd "$pkgdir" && tar -cvf - . ) > ./out/"$pkgname@$pkgver-$pkgrel.pkg.tar"
+	( cd "$pkgdir" && tar -c${_verbose+"v"}f - . ) > ./out/"$pkgname@$pkgver-$pkgrel.pkg.tar"
 esac
